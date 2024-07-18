@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Object Detection with YOLOv8</title>
+    <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<body>
+    <h1>Object Detection with YOLOv8</h1>
+    <p class="description">Upload an image to detect objects using the YOLOv8 model. The results will be displayed below.</p>
+    <div id="uploadContainer">
+        <label for="fileUpload">
+            <button id="fileBtn">Select Image</button>
+        </label>
+        <input id="fileUpload" type="file" accept="image/*" style="display: none;">
+    </div>
+    <div id="result"></div>
+    <img id="resultImage" src="#" alt="Processed Image">
+    <script>
+        const fileUpload = document.getElementById("fileUpload");
+        const fileBtn = document.getElementById("fileBtn");
+        const uploadContainer = document.getElementById("uploadContainer");
+        const resultDiv = document.getElementById("result");
+        const resultImage = document.getElementById("resultImage");
+
+        const classNames = {
+            0: 'mask_on',
+            1: 'no_mask',
+            2: 'mask_incorrectly_worn'
+        };
+
+        fileBtn.addEventListener("click", () => {
+            fileUpload.click();
+        });
+
+        fileUpload.addEventListener("change", async (event) => {
+            const imageFile = event.target.files[0];
+            const formData = new FormData();
+            formData.append("image_file", imageFile, "image_file");
+            const response = await fetch("/analyze", {
+                method: "POST",
+                body: formData
+            });
+
+            const result = await response.json();
+            displayResult(result);
+
+            resultImage.src = `data:image/jpeg;base64,${result.image}`;
+            resultImage.style.display = "block";
+            uploadContainer.style.marginTop = "0px";
+        });
+
+        function displayResult(result) {
+            if (result.detection_present && result.label !== -1) {
+                const detectedClass = classNames[result.label];
+                resultDiv.textContent = `Detected: ${detectedClass}`;
+                resultDiv.className = "show";
+                
+                if (result.label === 0) {
+                    resultDiv.style.backgroundColor = '#4CAF50';  // Green for 'mask_on'
+                } else if (result.label === 1 || result.label === 2) {
+                    resultDiv.style.backgroundColor = '#f44336';  // Red for 'no_mask' or 'mask_incorrectly_worn'
+                }
+            } else {
+                resultDiv.textContent = "No Detection";
+                resultDiv.className = "show no-detection";
+                resultDiv.style.backgroundColor = '#f44336';  // Red for no detection
+            }
+        }
+    </script>
+</body>
+</html>
